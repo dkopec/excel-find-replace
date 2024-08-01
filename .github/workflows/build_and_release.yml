@@ -6,6 +6,19 @@ on:
       - main
 
 jobs:
+  define-matrix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Define Matrix
+        id: matrix
+        run: |
+          echo 'os=[ubuntu-latest, windows-latest, macos-latest]' >> "$GITHUB_OUTPUT"
+          echo 'target=[linux-x64, win-x64, osx-x64]' >> "$GITHUB_OUTPUT"
+
+    outputs:
+      os: ${{ steps.matrix.outputs.os }}
+      target: ${{ steps.matrix.outputs.target }}
+
   version:
     runs-on: ubuntu-latest
     steps:
@@ -17,16 +30,20 @@ jobs:
 
     - name: Determine version
       id: gitversion
-      run: gitversion /output json /showvariable FullSemVer
+      run: dotnet-gitversion /output json /showvariable FullSemVer
+
+    outputs:
+      FullSemVer: steps.gitversion.outputs.FullSemVer
 
   build:
-    needs: version
+    needs:
+      - define-matrix
+      - version
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        target: [linux-x64, win-x64, osx-x64]
-
+        os: ${{ fromJSON(needs.define-matrix.outputs.os) }}
+        target: ${{ fromJSON(needs.define-matrix.outputs.target) }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -66,7 +83,9 @@ jobs:
         path: release/${{ matrix.os }}-${{ matrix.target }}.*
 
   create_release:
-    needs: build
+    needs:
+      - version
+      - build
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -82,6 +101,17 @@ jobs:
         release_name: Release ${{ needs.version.outputs.FullSemVer }}
         draft: false
         prerelease: false
+
+  upload_artifacts:
+    needs:
+      - define-matrix
+      - create_release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ${{ fromJSON(needs.define-matrix.outputs.os) }}
+        target: ${{ fromJSON(needs.define-matrix.outputs.target) }}
+    steps:
 
     - name: Upload Release Asset
       uses: actions/upload-release-asset@v1
