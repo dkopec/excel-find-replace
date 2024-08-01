@@ -1,8 +1,0 @@
-mode: ContinuousDeployment
-branches:
-  main:
-    regex: ^main$
-    source-branches: []
-    is-mainline: true
-    tracks-release-branches: true
-    is-release-branch: false

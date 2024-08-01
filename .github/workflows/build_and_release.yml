@@ -6,47 +6,13 @@ on:
       - main
 
 jobs:
-  define-matrix:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Define Matrix
-        id: matrix
-        run: |
-          echo 'os=[ubuntu-latest, windows-latest, macos-latest]' >> "$GITHUB_OUTPUT"
-          echo 'target=[linux-x64, win-x64, osx-x64]' >> "$GITHUB_OUTPUT"
-
-    outputs:
-      os: ${{ steps.matrix.outputs.os }}
-      target: ${{ steps.matrix.outputs.target }}
-
-  version:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-        fetch-tags: true
-
-    - name: Install GitVersion
-      run: dotnet tool install -g GitVersion.Tool
-
-    - name: Determine version
-      id: gitversion
-      run: dotnet-gitversion /output json /showvariable FullSemVer
-
-    outputs:
-      FullSemVer: steps.gitversion.outputs.FullSemVer
-
   build:
-    needs:
-      - define-matrix
-      - version
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: ${{ fromJSON(needs.define-matrix.outputs.os) }}
-        target: ${{ fromJSON(needs.define-matrix.outputs.target) }}
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        target: [linux-x64, win-x64, osx-x64]
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -54,7 +20,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: '8.x.x'
+        dotnet-version: '8.0.x'
 
     - name: Install dependencies
       run: dotnet restore
@@ -85,43 +51,22 @@ jobs:
         name: ${{ matrix.os }}-${{ matrix.target }}
         path: release/${{ matrix.os }}-${{ matrix.target }}.*
 
-  create_release:
-    needs:
-      - version
-      - build
+  release:
+    needs: build
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Create GitHub Release
-      id: create_release
-      uses: actions/create-release@v1
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ needs.version.outputs.FullSemVer }}
-        release_name: Release ${{ needs.version.outputs.FullSemVer }}
-        draft: false
-        prerelease: false
-
-  upload_artifacts:
-    needs:
-      - define-matrix
-      - create_release
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: ${{ fromJSON(needs.define-matrix.outputs.os) }}
-        target: ${{ fromJSON(needs.define-matrix.outputs.target) }}
-    steps:
-
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: release/${{ matrix.os }}-${{ matrix.target }}.*
-        asset_name: ${{ matrix.os }}-${{ matrix.target }}.*
-        asset_content_type: application/zip
+      run: npx semantic-release
