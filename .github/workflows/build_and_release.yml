@@ -36,7 +36,7 @@ jobs:
 
     - name: Publish
       run: |
-        dotnet publish -c Release -r ${{ matrix.target }} --self-contained true --property:PublishDir=./publish
+        dotnet publish -c Release -r ${{ matrix.target }} --self-contained true --property:PublishDir=../publish
 
     - name: Create release artifact
       run: |
