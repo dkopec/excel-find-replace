@@ -1,0 +1,94 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install GitVersion
+      run: dotnet tool install -g GitVersion.Tool
+
+    - name: Determine version
+      id: gitversion
+      run: gitversion /output json /showvariable FullSemVer
+
+  build:
+    needs: version
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        target: [linux-x64, win-x64, osx-x64]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.x.x'
+
+    - name: Install dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Publish
+      run: dotnet publish -c Release -r ${{ matrix.target }} --self-contained true -o ./publish
+
+    - name: Create release artifact
+      run: |
+        mkdir -p release
+        tar -czf release/${{ matrix.os }}-${{ matrix.target }}.tar.gz -C publish .
+      if: runner.os != 'Windows'
+      shell: bash
+
+    - name: Create release artifact (Windows)
+      run: |
+        mkdir release
+        Compress-Archive -Path publish\* -DestinationPath release\${{ matrix.os }}-${{ matrix.target }}.zip
+      if: runner.os == 'Windows'
+      shell: powershell
+
+    - name: Upload release assets
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.os }}-${{ matrix.target }}
+        path: release/${{ matrix.os }}-${{ matrix.target }}.*
+
+  create_release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Create GitHub Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ needs.version.outputs.FullSemVer }}
+        release_name: Release ${{ needs.version.outputs.FullSemVer }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: release/${{ matrix.os }}-${{ matrix.target }}.*
+        asset_name: ${{ matrix.os }}-${{ matrix.target }}.*
+        asset_content_type: application/zip
