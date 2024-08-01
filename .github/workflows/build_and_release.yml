@@ -32,7 +32,7 @@ jobs:
       run: dotnet build --configuration Release --no-restore
 
     - name: Publish
-      run: dotnet publish -c Release -r ${{ matrix.target }} --self-contained true -o ./publish
+      run: dotnet publish -c Release -r ${{ matrix.target }} --self-contained true --property:PublishDir=./publish
 
     - name: Create release artifact
       run: |
