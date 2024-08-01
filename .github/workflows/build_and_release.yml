@@ -35,7 +35,7 @@ jobs:
       run: dotnet test --non-build
 
     - name: Publish
-      run: dotnet publish -c Release -r ${{ matrix.target }} --self-contained true --property:PublishDir=./publish
+      run: dotnet publish -c Release -r ${{ matrix.target }} --no-build --self-contained true --property:PublishDir=./publish -o ./publish
 
     - name: Create release artifact
       run: |
