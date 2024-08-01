@@ -29,13 +29,14 @@ jobs:
       run: dotnet restore
 
     - name: Build
-      run: dotnet build --configuration Release --no-restore
+      run: dotnet build --configuration Release
 
     - name: Test
-      run: dotnet test --no-restore
+      run: dotnet test
 
     - name: Publish
-      run: dotnet publish -c Release -r ${{ matrix.target }} --no-build --self-contained true --property:PublishDir=./publish -o ./publish
+      run: |
+        dotnet publish -c Release -r ${{ matrix.target }} --self-contained true --property:PublishDir=./publish
 
     - name: Create release artifact
       run: |
