@@ -32,7 +32,7 @@ jobs:
       run: dotnet build --configuration Release --no-restore
 
     - name: Test
-      run: dotnet test --non-build
+      run: dotnet test --no-restore
 
     - name: Publish
       run: dotnet publish -c Release -r ${{ matrix.target }} --no-build --self-contained true --property:PublishDir=./publish -o ./publish
