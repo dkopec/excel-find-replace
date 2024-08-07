@@ -57,7 +57,7 @@ jobs:
         if ($runtime -eq 'win-x64'){
           Compress-Archive -Path $publish_dir -DestinationPath "release\$release_name.zip"
         } else {
-          tar -C $publish_dir -czf "release/$release_name.tar.gz"
+          tar -czf "release/$release_name.tar.gz" -C $publish_dir
         }
 
     - name: Upload release assets
