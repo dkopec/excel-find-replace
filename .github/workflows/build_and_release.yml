@@ -50,14 +50,13 @@ jobs:
 
     - name: Create release artifact
       run: |
-        ls publish
         mkdir release
         $runtime = "${{ matrix.target.runtime }}"
         $release_name = "${{github.event.repository.name}}-${{ matrix.target.runtime }}"
         if ($runtime -eq 'win-x64'){
           Compress-Archive -Path publish\* -DestinationPath "release\$release_name.zip"
         } else {
-          tar -czf "release/$release_name.tar.gz" -C "publish/"
+          tar -czf "release/$release_name.tar.gz" "publish/*"
         }
 
     - name: Upload release assets
