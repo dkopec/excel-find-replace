@@ -57,13 +57,13 @@ jobs:
         if ($runtime -eq 'win-x64'){
           Compress-Archive -Path $publish_dir -DestinationPath "release\$release_name.zip"
         } else {
-          tar -czf "release/$release_name.tar.gz" $publish_dir
+          tar -C $publish_dir -czf "release/$release_name.tar.gz"
         }
 
     - name: Upload release assets
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.target.runtime }}
+        name: ${{github.event.repository.name}}-${{ matrix.target.runtime }}
         path: release/*
 
   release:
@@ -72,6 +72,13 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Download All Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: dist
+        pattern: ${{github.event.repository.name}}-*
+        merge-multiple: true
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
