@@ -53,11 +53,10 @@ jobs:
         mkdir release
         $runtime = "${{ matrix.target.runtime }}"
         $release_name = "${{github.event.repository.name}}-${{ matrix.target.runtime }}"
-        $publish_dir = "publish\*"
         if ($runtime -eq 'win-x64'){
-          Compress-Archive -Path $publish_dir -DestinationPath "release\$release_name.zip"
+          Compress-Archive -Path publish\* -DestinationPath "release\$release_name.zip"
         } else {
-          tar -czf "release/$release_name.tar.gz" -C $publish_dir
+          tar -czf "release/$release_name.tar.gz" -C publish
         }
 
     - name: Upload release assets
