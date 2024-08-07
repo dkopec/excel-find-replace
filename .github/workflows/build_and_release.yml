@@ -50,6 +50,7 @@ jobs:
 
     - name: Create release artifact
       run: |
+        ls publish
         mkdir release
         $runtime = "${{ matrix.target.runtime }}"
         $release_name = "${{github.event.repository.name}}-${{ matrix.target.runtime }}"
