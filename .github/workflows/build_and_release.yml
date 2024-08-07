@@ -8,22 +8,33 @@ on:
 permissions:
   contents: write
 
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  DOTNET_NOLOGO: true
+
+defaults:
+  run:
+    shell: pwsh
+
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.target.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        target: [linux-x64, win-x64, osx-x64]
-
+        target:
+          - os: ubuntu-latest
+            runtime: linux-x64
+          - os: macos-latest
+            runtime: osx-x64
+          - os: windows-latest
+            runtime: win-x64
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    # Install the .NET SDK indicated in the global.json file
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '8.0.x'
 
     - name: Install dependencies
       run: dotnet restore
@@ -35,27 +46,25 @@ jobs:
       run: dotnet test
 
     - name: Publish
-      run: dotnet publish -c Release -r ${{ matrix.target }} --self-contained true --property:PublishDir=../publish
+      run: dotnet publish -c Release -r ${{ matrix.target.runtime }} --property:PublishDir=../publish
 
     - name: Create release artifact
       run: |
-        mkdir -p release
-        tar -czf release/${{ matrix.os }}-${{ matrix.target }}.tar.gz -C publish .
-      if: runner.os != 'Windows'
-      shell: bash
-
-    - name: Create release artifact (Windows)
-      run: |
         mkdir release
-        Compress-Archive -Path publish\* -DestinationPath release\${{ matrix.os }}-${{ matrix.target }}.zip
-      if: runner.os == 'Windows'
-      shell: powershell
+        $runtime = "${{ matrix.target.runtime }}"
+        $release_name = "${{github.event.repository.name}}-${{ matrix.target.runtime }}"
+        $publish_dir = "publish\*"
+        if ($runtime -eq 'win-x64'){
+          Compress-Archive -Path $publish_dir -DestinationPath "release\$release_name.zip"
+        } else {
+          tar -czf "release/$release_name.tar.gz" $publish_dir
+        }
 
     - name: Upload release assets
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.os }}-${{ matrix.target }}
-        path: release/${{ matrix.os }}-${{ matrix.target }}.*
+        name: ${{ matrix.target.runtime }}
+        path: release/*
 
   release:
     needs: build

@@ -5,6 +5,9 @@ using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace ExcelFindReplace;
 
+/// <summary>
+/// This class is the cli interface.
+/// </summary>
 public partial class ExcelFindReplace
 {
   static async Task<int> Main(string[] args)
